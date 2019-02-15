@@ -7,7 +7,7 @@ class Location(OrderedModel):
     """Model definition for Locations (like city or town)"""
 
     name = models.TextField()
-    temparature = models.TextField()
+    temperature = models.TextField()
     description = models.TextField()
     icon = models.TextField()
 
