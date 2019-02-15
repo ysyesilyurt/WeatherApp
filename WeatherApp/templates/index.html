@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>WeatherApp</title>
+    <link rel="stylesheet" href="../static/css/locations.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.css" />
+    <link rel="icon" type="image/png" href="../static/icon.ico">
+</head>
+
+{% csrf_token %}
+
+<body>
+    <section class="hero is-primary">
+        <div class="hero-body">
+            <div class="container">
+                <h1 class="title">
+                    WeatherApp
+                </h1>
+                Version 1.0
+            </div>
+            <span style="float:right; margin-right: 10px; margin-top: 5px">
+                {% if request.user.is_authenticated %}
+                    Current User: {{ request.user }}
+                    <br>
+                    <a href="/accounts/logout?next=/" class="btn btn-danger" style="margin-left: 10px; margin-top: 10px">Logout</a>
+                {% endif %}
+            </span>
+        </div>
+    </section>
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-offset-4 is-4">
+                    <div class="field has-addons">
+                        <div class="control is-expanded">
+                            <input class="input add-location" type="text" placeholder="Location Name">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-offset-4 is-4">
+                    <div class="locations">
+                        {% for loc in locations %}
+                            <article class="media">
+                                    <div class="media-left">
+                                    <figure class="image is-50x50">
+                                        <img src="http://openweathermap.org/img/w/{{ loc.icon }}.png" alt="Image">
+                                    </figure>
+                                    </div>
+                                    <div class="media-content">
+                                        <div class="content">
+                                            <p>
+                                                <span id="locName" class="title">{{ loc.name }}</span>
+                                                <br>
+                                                <span class="subtitle">{{ loc.temperature }}° C</span>
+                                                <br> {{ loc.description }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="media-right">
+                                        <button name="del" class='btn btn-danger glyphicon glyphicon-remove remove-location'></button>
+                                    </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                    <br>
+                    <div class="location-footer">
+                        <strong><span class="count-locations"></span></strong> Locations exist
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+<script src="../static/js/locations.js"></script>
+</body>
+<div id="footer">
+    <p style="text-align: center;"> MIT © 2019 ysyesilyurt <a href="https://github.com/ysyesilyurt/WeatherApp"> Original repository</a></p>
+</div>
+</html>
