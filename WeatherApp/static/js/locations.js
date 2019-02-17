@@ -30,23 +30,10 @@ $(".locations").disableSelection();
 
 countLocations();
 
-// Weather information gets refreshed for every 2 hours
+// Weather information gets refreshed for every 2 hours for all current set of locations
 setTimeout(refreshWeather, 7200000);
 
-function refreshWeather(){
-    $.post(window.location.pathname,
-            { csrfmiddlewaretoken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
-             'submit': "Refresh"},
-			function (data) {
-                if (data.result == "Fail")
-                    alert(data.appStatus);
-                else
-                    location.reload();
-			});
-    setTimeout(refreshWeather, 7200000);
-}
-
-// request weather for new locations after entering the list name
+// adding a new location to get its weather data
 $('.add-location').focus();
 $('.add-location').on('keypress',function (event) {
     event.preventDefault;
@@ -58,18 +45,18 @@ $('.add-location').on('keypress',function (event) {
     }
 });
 
-// delete a Location
+// deleting a location
 $('.locations').on('click','.remove-location',function(){
     removeItem(this);
 });
 
-// delete all Locations
+// delete all current locations
 $("#removeAll").click(function(){
     removeAll();
 });
 
 
-// count TodoLists
+// count current set of locations
 function countLocations(){
     var count = $(".locations article").length;
     $('.count-locations').html(count);
@@ -131,3 +118,18 @@ function removeAll(){
 
         );
 }
+
+
+function refreshWeather(){
+    $.post(window.location.pathname,
+            { csrfmiddlewaretoken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
+             'submit': "Refresh"},
+			function (data) {
+                if (data.result == "Fail")
+                    alert(data.appStatus);
+                else
+                    location.reload();
+			});
+    setTimeout(refreshWeather, 7200000);
+}
+
