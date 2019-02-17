@@ -6,6 +6,7 @@ from ordered_model.models import OrderedModel
 class Location(OrderedModel):
     """Model definition for Locations (like city or town)"""
 
+    locID = models.IntegerField(primary_key=True)
     name = models.TextField()
     temperature = models.TextField()
     description = models.TextField()

@@ -30,11 +30,14 @@
             </div>
             <span style="float:right; margin-right: 10px; margin-top: 5px">
                 {% if request.user.is_authenticated %}
-                    Current User: {{ request.user }}
+                    <strong>Current User:</strong> {{ request.user }}
                     <br>
                     <a href="/accounts/logout?next=/" class="btn btn-danger" style="margin-left: 10px; margin-top: 10px">Logout</a>
                 {% endif %}
             </span>
+        </div>
+        <div id="refresh" align="center" style="text-align: center">
+            <strong>Weather information gets automatically updated for every 2 hours</strong>
         </div>
     </section>
     <section class="section">
@@ -50,6 +53,11 @@
             </div>
         </div>
     </section>
+    <div class="location-header" align="center">
+        <strong><span class="count-locations"></span></strong> Locations exist
+        <br><br>
+        <button id="removeAll" class='btn btn-danger remove-all'>Delete All</button>
+    </div>
     <section class="section">
         <div class="container">
             <div class="columns">
@@ -78,17 +86,14 @@
                             </article>
                         {% endfor %}
                     </div>
-                    <br>
-                    <div class="location-footer">
-                        <strong><span class="count-locations"></span></strong> Locations exist
-                    </div>
                 </div>
             </div>
         </div>
     </section>
 <script src="../static/js/locations.js"></script>
 </body>
-<div id="footer">
+<div id="footer" align="center">
     <p style="text-align: center;"> MIT © 2019 ysyesilyurt <a href="https://github.com/ysyesilyurt/WeatherApp"> Original repository</a></p>
+    <br><br>
 </div>
 </html>

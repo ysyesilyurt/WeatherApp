@@ -17,7 +17,7 @@ $(".locations").sortable({
 
             $.post(window.location.pathname,
             { csrfmiddlewaretoken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
-             'submit': "locationSort",
+             'submit': "LocationSort",
              'locationName': locationName,
              'newIndex': newIndex},
 			function (data) {
@@ -28,8 +28,23 @@ $(".locations").sortable({
 });
 $(".locations").disableSelection();
 
-
 countLocations();
+
+// Weather information gets refreshed for every 2 hours
+setTimeout(refreshWeather, 7200000);
+
+function refreshWeather(){
+    $.post(window.location.pathname,
+            { csrfmiddlewaretoken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
+             'submit': "Refresh"},
+			function (data) {
+                if (data.result == "Fail")
+                    alert(data.appStatus);
+                else
+                    location.reload();
+			});
+    setTimeout(refreshWeather, 7200000);
+}
 
 // request weather for new locations after entering the list name
 $('.add-location').focus();
@@ -47,6 +62,12 @@ $('.add-location').on('keypress',function (event) {
 $('.locations').on('click','.remove-location',function(){
     removeItem(this);
 });
+
+// delete all Locations
+$("#removeAll").click(function(){
+    removeAll();
+});
+
 
 // count TodoLists
 function countLocations(){
@@ -92,3 +113,21 @@ function removeItem(element){
           );
 }
 
+function removeAll(){
+    $.post(window.location.pathname,
+        { csrfmiddlewaretoken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
+            'submit': "Delete All"
+        },
+        function (data) {
+            if (data.result == "Fail")
+                    alert(data.appStatus);
+            else
+            {
+                $('.locations article').remove();
+                countLocations();
+                $('.add-location').val('');
+            }
+        }
+
+        );
+}

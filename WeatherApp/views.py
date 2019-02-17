@@ -27,29 +27,35 @@ def index(request):
 
     elif request.POST["submit"] == "Create":
         locationName = request.POST['locationName']
-        try:
-            if locationName == "":
-                appStatus = "Please choose a valid location name"
-                result = "Fail"
-            else:
-                url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(locationName,
-                                                                                                         OW_API_KEY)
-                locationWeather = requests.get(url).json()
-                if locationWeather['cod'] == 200:
-                    models.Location.objects.create(name=locationWeather['name'], temperature=locationWeather['main']['temp'],
+        if locationName == "":
+            appStatus = "Please choose a valid location name"
+            result = "Fail"
+        else:
+            url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(locationName,
+                                                                                                     OW_API_KEY)
+            locationWeather = requests.get(url).json()
+            if locationWeather['cod'] == 200:
+                try:
+                    if models.Location.objects.count() == 0:
+                        newLocId = 0
+                    else:
+                        newLocId = models.Location.objects.latest('locID').locID + 1
+                    models.Location.objects.create(locID=newLocId, name=locationWeather['name'],
+                                                   temperature=locationWeather['main']['temp'],
                                                    description=locationWeather['weather'][0]['description'],
                                                    icon=locationWeather['weather'][0]['icon'], owner=request.user)
+                except IntegrityError:
+                    appStatus = "Please choose a location name which does not exists in your current set of " \
+                                "locations."
+                    result = "Fail"
 
-                elif locationWeather['cod'] == '404' and locationWeather['message'] == 'city not found':
-                    appStatus = "Location could not be found, please make sure that you enter a valid location name."
-                    result = "Fail"
-                else:
-                    appStatus = "Create operation failed. This could be an issue related with OpenWeatherMap, " \
-                                "please contact with the administrator."
-                    result = "Fail"
-        except IntegrityError:
-            appStatus = "Please choose a location name which does not exists in your current set of locations."
-            result = "Fail"
+            elif locationWeather['cod'] == '404' and locationWeather['message'] == 'city not found':
+                appStatus = "Location could not be found, please make sure that you enter a valid location name."
+                result = "Fail"
+            else:
+                appStatus = "Create operation failed. This could be an issue related with OpenWeatherMap, " \
+                            "please contact with the administrator."
+                result = "Fail"
 
     elif request.POST["submit"] == "Delete":
         locationName = request.POST['locationName']
@@ -64,7 +70,7 @@ def index(request):
                             "exists in current set of Locations"
                 result = "Fail"
 
-    elif request.POST["submit"] == "locationSort":
+    elif request.POST["submit"] == "LocationSort":
         locationName = request.POST['locationName']
         newIndex = request.POST['newIndex']
         if locationName == "":
@@ -72,17 +78,46 @@ def index(request):
             result = "Fail"
         else:
             try:
-                todoList = models.Location.objects.filter(owner=request.user).get(name=locationName)
-                todoList.to(int(newIndex))
+                location = models.Location.objects.filter(owner=request.user).get(name=locationName)
+                location.to(int(newIndex))
             except models.Location.DoesNotExist:
                 appStatus = "Sorting operation failed. Please make sure that location name " \
                             "exists in current set of Locations"
                 result = "Fail"
 
+    elif request.POST["submit"] == "Refresh":
+        try:
+            locations = models.Location.objects.filter(owner=request.user)
+            for location in locations:
+                url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(location.name,
+                                                                                                         OW_API_KEY)
+                locationWeather = requests.get(url).json()
+                if locationWeather['cod'] == 200:
+                    location.temperature = locationWeather['main']['temp']
+                    location.description = locationWeather['weather'][0]['description']
+                    location.icon = locationWeather['weather'][0]['icon']
+                    location.save()
+                else:
+                    appStatus = "Refresh operation for {} failed. This could be an issue related with OpenWeatherMap, " \
+                                "please contact with the administrator.".format(location.name)
+                    result = "Fail"
+
+        except models.Location.DoesNotExist:
+            appStatus = "Refreshing operation failed. Please make sure that user exists" \
+                        "exists in current set of Locations"
+            result = "Fail"
+
+    elif request.POST["submit"] == "Delete All":
+        try:
+            models.Location.objects.filter(owner=request.user).delete()
+        except models.Location.DoesNotExist:
+            appStatus = "Deleting all operation failed, no locations seems to exist."
+            result = "Fail"
+
     if result == "":
         result = "Success"
     locations = models.Location.objects.filter(owner=request.user)
-    return responseTodoLists(result, appStatus, locations)
+    return responseLocations(result, appStatus, locations)
 
 
 def signup(request):
@@ -103,7 +138,7 @@ def signup(request):
         return render(request, 'signup.html')
 
 
-def responseTodoLists(result, statusMsg, locations):
+def responseLocations(result, statusMsg, locations):
     """Helper function for returning an app request result in JSON HttpResponse"""
 
     locations = serializers.serialize("json", locations)
