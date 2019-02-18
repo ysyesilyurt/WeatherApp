@@ -23,7 +23,22 @@ def index(request):
 
     if request.method == "GET":
         locations = models.Location.objects.filter(owner=request.user)
-        return render(request, "index.html", {"locations": locations})
+        for location in locations:
+            url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(location.name,
+                                                                                                     OW_API_KEY)
+            locationWeather = requests.get(url).json()
+            if locationWeather['cod'] == 200:
+                location.temperature = locationWeather['main']['temp']
+                location.description = locationWeather['weather'][0]['description']
+                location.icon = locationWeather['weather'][0]['icon']
+                location.save()
+            else:
+                appStatus = "Refresh operation for {} failed. This could be an issue related with OpenWeatherMap, " \
+                            "please contact with the administrator.".format(location.name)
+                result = "Fail"
+                break
+        if result != "Fail":
+            return render(request, "index.html", {"locations": locations})
 
     elif request.POST["submit"] == "Create":
         locationName = request.POST['locationName']
@@ -101,6 +116,7 @@ def index(request):
                     appStatus = "Refresh operation for {} failed. This could be an issue related with OpenWeatherMap, " \
                                 "please contact with the administrator.".format(location.name)
                     result = "Fail"
+                    break
 
         except models.Location.DoesNotExist:
             appStatus = "Refreshing operation failed. Please make sure that user exists" \
