@@ -1,29 +1,22 @@
 $(".locations").sortable({
         update: function(event, data) {
-            var locationName = data.item.context.children[1].children[0].children[0].children[0].textContent;
-            var locations = [];
-            var newIndex;
+            var currentItems = "";
 
             $('.locations article').each(function () {
-                locations.push($(this).context.children[1].children[0].children[0].children[0].innerText);
+                currentItems += $(this).context.children[1].children[0].children[0].children[0].textContent + ',';
             });
 
-            for (i = 0; i < locations.length; i++) {
-                if (locations[i] == locationName) {
-                    newIndex = i;
-                    break;
-                }
-            }
+            var orderList = JSON.stringify(currentItems.slice(0,-1));
 
             $.post(window.location.pathname,
             { csrfmiddlewaretoken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
              'submit': "LocationSort",
-             'locationName': locationName,
-             'newIndex': newIndex},
+             'orderList': orderList},
 			function (data) {
                 if (data.result == "Fail")
                     alert(data.appStatus);
 			});
+
         }
 });
 $(".locations").disableSelection();

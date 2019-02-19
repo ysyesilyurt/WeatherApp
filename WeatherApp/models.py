@@ -1,9 +1,14 @@
 from django.contrib.auth.models import User
 from django.db import models
-from ordered_model.models import OrderedModel
 
 
-class Location(OrderedModel):
+class Owner(User):
+    """Inherited Model definition for Owners"""
+
+    orderList = models.TextField(default="")
+
+
+class Location(models.Model):
     """Model definition for Locations (like city or town)"""
 
     locID = models.IntegerField(primary_key=True)
@@ -13,9 +18,9 @@ class Location(OrderedModel):
     icon = models.TextField()
 
     # a Many-to-One relationship with User Model
-    owner = models.ForeignKey(User, blank=False, null=False, on_delete=models.CASCADE, related_name="owner")
+    owner = models.ForeignKey(Owner, blank=False, null=False, on_delete=models.CASCADE, related_name="owner")
 
-    class Meta(OrderedModel.Meta):
+    class Meta:
         # User can not request weather information for same location more than once
         unique_together = (("name", "owner"),)
 

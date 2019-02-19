@@ -1,9 +1,9 @@
 import json
 import requests
+import re
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.core import serializers
 from django.db import IntegrityError
 from django.http import HttpResponse
@@ -22,7 +22,8 @@ def index(request):
     appStatus = ""
 
     if request.method == "GET":
-        locations = models.Location.objects.filter(owner=request.user)
+        owner = models.Owner.objects.filter(username=request.user)[0]
+        locations = models.Location.objects.filter(owner=owner)
         for location in locations:
             url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(location.name,
                                                                                                      OW_API_KEY)
@@ -38,7 +39,15 @@ def index(request):
                 result = "Fail"
                 break
         if result != "Fail":
-            return render(request, "index.html", {"locations": locations})
+            orderList = models.Owner.objects.filter(username=request.user).values('orderList')[0]['orderList']
+            if orderList != "":
+                orderList = orderList.split(',')
+                sortedLocations = []
+                for locName in orderList:
+                    sortedLocations.append(locations.get(name=locName))
+                return render(request, "index.html", {"locations": sortedLocations})
+            else:
+                return render(request, "index.html", {"locations": locations})
 
     elif request.POST["submit"] == "Create":
         locationName = request.POST['locationName']
@@ -55,10 +64,16 @@ def index(request):
                         newLocId = 0
                     else:
                         newLocId = models.Location.objects.latest('locID').locID + 1
+                    owner = models.Owner.objects.filter(username=request.user)[0]
                     models.Location.objects.create(locID=newLocId, name=locationWeather['name'],
                                                    temperature=locationWeather['main']['temp'],
                                                    description=locationWeather['weather'][0]['description'],
-                                                   icon=locationWeather['weather'][0]['icon'], owner=request.user)
+                                                   icon=locationWeather['weather'][0]['icon'], owner=owner)
+
+                    oldOrderList = models.Owner.objects.filter(username=request.user).values('orderList')[0]['orderList']
+                    if oldOrderList != "":
+                        newOrderList = oldOrderList + ',' + locationWeather['name']
+                        models.Owner.objects.filter(username=request.user).update(orderList=newOrderList)
                 except IntegrityError:
                     appStatus = "Please choose a location name which does not exists in your current set of " \
                                 "locations."
@@ -79,30 +94,32 @@ def index(request):
             result = "Fail"
         else:
             try:
-                models.Location.objects.filter(owner=request.user).get(name=locationName).delete()
+                owner = models.Owner.objects.filter(username=request.user)[0]
+                models.Location.objects.filter(owner=owner).get(name=locationName).delete()
+                oldOrderList = models.Owner.objects.filter(username=request.user).values('orderList')[0]['orderList']
+                newOrderList = re.sub(locationName + ',', "", oldOrderList)
+                if len(oldOrderList) == len(newOrderList):
+                    newOrderList = re.sub(',' + locationName, "", oldOrderList)
+                models.Owner.objects.filter(username=request.user).update(orderList=newOrderList)
             except models.Location.DoesNotExist:
                 appStatus = "Delete operation failed. Please make sure that location name " \
                             "exists in current set of Locations"
                 result = "Fail"
 
     elif request.POST["submit"] == "LocationSort":
-        locationName = request.POST['locationName']
-        newIndex = request.POST['newIndex']
-        if locationName == "":
-            appStatus = "Please choose a valid Location name"
+        orderList = request.POST['orderList']
+        try:
+            orderList = json.loads(orderList)
+            models.Owner.objects.filter(username=request.user).update(orderList=orderList)
+        except models.Owner.DoesNotExist:
+            appStatus = "Sorting operation failed. Please make sure that owner " \
+                        "exists in WeatherApp system"
             result = "Fail"
-        else:
-            try:
-                location = models.Location.objects.filter(owner=request.user).get(name=locationName)
-                location.to(int(newIndex))
-            except models.Location.DoesNotExist:
-                appStatus = "Sorting operation failed. Please make sure that location name " \
-                            "exists in current set of Locations"
-                result = "Fail"
 
     elif request.POST["submit"] == "Refresh":
         try:
-            locations = models.Location.objects.filter(owner=request.user)
+            owner = models.Owner.objects.filter(username=request.user)[0]
+            locations = models.Location.objects.filter(owner=owner)
             for location in locations:
                 url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(location.name,
                                                                                                          OW_API_KEY)
@@ -125,14 +142,24 @@ def index(request):
 
     elif request.POST["submit"] == "Delete All":
         try:
-            models.Location.objects.filter(owner=request.user).delete()
+            owner = models.Owner.objects.filter(username=request.user)[0]
+            models.Location.objects.filter(owner=owner).delete()
+            models.Owner.objects.filter(username=request.user).update(orderList="")
         except models.Location.DoesNotExist:
             appStatus = "Deleting all operation failed, no locations seems to exist."
             result = "Fail"
 
     if result == "":
         result = "Success"
-    locations = models.Location.objects.filter(owner=request.user)
+    owner = models.Owner.objects.filter(username=request.user)[0]
+    locations = models.Location.objects.filter(owner=owner)
+    orderList = models.Owner.objects.filter(username=request.user).values('orderList')[0]['orderList']
+    if orderList != "":
+        orderList = orderList.split(',')
+        sortedLocations = []
+        for locName in orderList:
+            sortedLocations.append(locations.get(name=locName))
+        locations = sortedLocations
     return responseLocations(result, appStatus, locations)
 
 
@@ -144,7 +171,7 @@ def signup(request):
         email = request.POST['email']
         password = request.POST['password']
         try:
-            user = User.objects.create_user(username, email, password)
+            user = models.Owner.objects.create_user(username, email, password)
             login(request, user)
             return redirect('index')
         except IntegrityError:
@@ -156,7 +183,6 @@ def signup(request):
 
 def responseLocations(result, statusMsg, locations):
     """Helper function for returning an app request result in JSON HttpResponse"""
-
     locations = serializers.serialize("json", locations)
     return HttpResponse(json.dumps({'result': result, 'appStatus': statusMsg,
                                     'locations': locations}), 'text/json')
