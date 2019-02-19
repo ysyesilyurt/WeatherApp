@@ -1,6 +1,6 @@
 import json
-import requests
 import re
+import requests
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -20,9 +20,9 @@ def index(request):
 
     result = ""
     appStatus = ""
+    owner = models.Owner.objects.filter(username=request.user)[0]
 
     if request.method == "GET":
-        owner = models.Owner.objects.filter(username=request.user)[0]
         locations = models.Location.objects.filter(owner=owner)
         for location in locations:
             url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(location.name,
@@ -64,7 +64,6 @@ def index(request):
                         newLocId = 0
                     else:
                         newLocId = models.Location.objects.latest('locID').locID + 1
-                    owner = models.Owner.objects.filter(username=request.user)[0]
                     models.Location.objects.create(locID=newLocId, name=locationWeather['name'],
                                                    temperature=locationWeather['main']['temp'],
                                                    description=locationWeather['weather'][0]['description'],
@@ -94,7 +93,6 @@ def index(request):
             result = "Fail"
         else:
             try:
-                owner = models.Owner.objects.filter(username=request.user)[0]
                 models.Location.objects.filter(owner=owner).get(name=locationName).delete()
                 oldOrderList = models.Owner.objects.filter(username=request.user).values('orderList')[0]['orderList']
                 newOrderList = re.sub(locationName + ',', "", oldOrderList)
@@ -118,7 +116,6 @@ def index(request):
 
     elif request.POST["submit"] == "Refresh":
         try:
-            owner = models.Owner.objects.filter(username=request.user)[0]
             locations = models.Location.objects.filter(owner=owner)
             for location in locations:
                 url = 'http://api.openweathermap.org/data/2.5/weather?q={}&units=metric&appid={}'.format(location.name,
@@ -142,7 +139,6 @@ def index(request):
 
     elif request.POST["submit"] == "Delete All":
         try:
-            owner = models.Owner.objects.filter(username=request.user)[0]
             models.Location.objects.filter(owner=owner).delete()
             models.Owner.objects.filter(username=request.user).update(orderList="")
         except models.Location.DoesNotExist:
@@ -151,7 +147,6 @@ def index(request):
 
     if result == "":
         result = "Success"
-    owner = models.Owner.objects.filter(username=request.user)[0]
     locations = models.Location.objects.filter(owner=owner)
     orderList = models.Owner.objects.filter(username=request.user).values('orderList')[0]['orderList']
     if orderList != "":
